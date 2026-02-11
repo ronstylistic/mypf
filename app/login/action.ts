@@ -1,16 +1,15 @@
 "use server"
 
-import { registerUser } from "@/lib/service/register-service"
+import { loginUser } from "@/lib/service/register-service"
 
-export async function registerAction(
+export async function loginAction(
   formData: FormData
 ) {
-    const name = formData.get("name") as string
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
     try {
-        await registerUser(name,email, password)
+        await loginUser(email, password)
         return { success: true }
     } catch (error: any) {
         return { error: error.message }

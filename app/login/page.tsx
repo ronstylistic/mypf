@@ -1,60 +1,136 @@
 "use client"
-
 import { signIn } from "next-auth/react"
-import { useState } from "react"
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Controller, useForm } from "react-hook-form"
+
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters"),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 export default function Page() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
-  async function handleLogin() {
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: true,
-      callbackUrl: "/dashboard",
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
+
+  const onSubmit = (data: LoginFormValues) => {
+    setError(null);
+
+    startTransition(async () => {
+      const result = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password")
+      } else {
+        router.push("/dashboard");
+      }
     })
-
-    if (res?.error) {
-      setError("Invalid email or password")
-    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <Card className="w-95">
         <CardHeader>
-          <h1 className="text-xl font-bold">Login</h1>
+          <h1 className="text-xl font-bold">
+           Login
+          </h1>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input
-            placeholder="Email"
-            value={email}
-            onChange={(e:any) => setEmail(e.target.value)}
-          />
-          <Input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e:any) => setPassword(e.target.value)}
-          />
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
-          <Button className="w-full" onClick={handleLogin}>
-            Sign in
+
+          <form
+              id="login-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
+              <FieldGroup>
+                
+                <Controller
+                  name="email"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel>Email</FieldLabel>
+                      <Input
+                        {...field}
+                        placeholder="juan@example.com"
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError
+                          errors={[fieldState.error]}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="password"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel>Password</FieldLabel>
+                      <Input
+                        {...field}
+                        type="password"
+                        placeholder="Enter your password"
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError
+                          errors={[fieldState.error]}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+              </FieldGroup>
+            </form>          
+        </CardContent>
+
+        <CardFooter>
+        <Field orientation="responsive">
+          <Button type="submit" form="login-form" disabled={isPending}>
+              {isPending ? "Logging in..." : "Login"}
           </Button>
-          <p className="text-sm text-center">
-            No account?{" "}
+
+           <p className="text-sm text-center">
+            Don't have an account?{" "}
             <a href="/register" className="underline">
               Register
             </a>
           </p>
-        </CardContent>
+
+          {error && (
+              <p className="text-sm text-red-600">
+                {error}
+              </p>
+            )}
+        </Field>
+      </CardFooter>
       </Card>
     </div>
   )

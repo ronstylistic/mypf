@@ -1,19 +1,17 @@
 import { getAuthSession } from "@/lib/auth"
 
 export default async function DashboardPage() {
-  //const session = await getAuthSession()
+  const session = await getAuthSession()
 
   return (
     <section className="bg-white py-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <h2 className="text-2xl font-bold">
-            Ronnel Bedana
-       {/*  Welcome, {session?.user.email} */}
+        Welcome, {session?.user.name}
       </h2>
 
       <p className="text-muted-foreground mt-2">
-     {/*    Role: {session?.user.role} */}
-     Doctor
+        Role: {session?.user.role}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">

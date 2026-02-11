@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import bcrypt from "bcrypt"
 
 export const authOptions: NextAuthOptions = {
@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
+          name: user.name,
           role: user.role,
           doctorId: user.doctorId,
           subscription: user.subscription,
@@ -47,6 +48,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
+        token.email = (user as any).email
+        token.name = (user as any).name
         token.doctorId = (user as any).doctorId
         token.subscription = (user as any).subscription
       }
@@ -56,6 +59,7 @@ export const authOptions: NextAuthOptions = {
       session.user = {
         id: token.id,
         email: token.email,
+        name: token.name,
         role: token.role,
         doctorId: token.doctorId,
         subscription: token.subscription,
