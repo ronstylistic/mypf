@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import prisma  from "@/lib/prisma"
 import { getAuthSession } from "@/lib/auth"
 import { doctorScope } from "@/lib/rbac"
 
@@ -8,6 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json([], { status: 401 })
 
   const doctorId = doctorScope(session)
+  if (!doctorId) return NextResponse.json([], { status: 401 })
 
   const patients = await prisma.patient.findMany({
     where: { doctorId },
@@ -22,18 +23,27 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({}, { status: 401 })
 
   const doctorId = doctorScope(session)
-  const { name, birthday } = await req.json()
-
-  if (!name) {
+  if (!doctorId) {
     return NextResponse.json(
-      { error: "Name is required" },
+      { error: "Doctor ID is required" },
+      { status: 401 }
+    )
+  }
+  const { firstname, lastName, birthday } = await req.json()
+
+  if (!firstname || !lastName) {
+    return NextResponse.json(
+      { error: "First name and last name are required" },
       { status: 400 }
     )
   }
 
   const patient = await prisma.patient.create({
     data: {
-      name,
+      // Replace 'name' with the correct field name as per your Prisma schema, e.g., 'fullName' or remove if not needed
+      // fullName: name,
+      firstName: firstname,
+      lastName: lastName,
       birthday: birthday ? new Date(birthday) : null,
       doctorId,
     },

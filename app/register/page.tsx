@@ -1,32 +1,57 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { registerAction } from "./action"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Controller, useForm } from "react-hook-form"
+
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+export const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters"),
+})
+
+type RegisterFormValues = z.infer<typeof registerSchema>
 
 export default function Page() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [name, setName] = useState("")
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
-  async function handleRegister() {
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+  })
+
+  const onSubmit = (data: RegisterFormValues) => {
+    setError(null);
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append("email", data.email)
+      formData.append("password", data.password)
+      formData.append("name", data.name)
+
+      const result = await registerAction(formData)
+
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push("/login");
+      }
     })
-
-    if (!res.ok) {
-      const data = await res.json()
-      setError(data.error || "Registration failed")
-      return
-    }
-
-    router.push("/login")
   }
 
   return (
@@ -38,36 +63,96 @@ export default function Page() {
           </h1>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Input
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
-          <Button className="w-full" onClick={handleRegister}>
-            Register
+
+          <form
+              id="register-form"
+              onSubmit={form.handleSubmit(onSubmit)}
+            >
+              <FieldGroup>
+                <Controller
+                  name="name"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel>Name</FieldLabel>
+                      <Input
+                        {...field}
+                        placeholder="Juan"
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError
+                          errors={[fieldState.error]}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="email"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel>Email</FieldLabel>
+                      <Input
+                        {...field}
+                        placeholder="juan@example.com"
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError
+                          errors={[fieldState.error]}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="password"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel>Password</FieldLabel>
+                      <Input
+                        {...field}
+                        type="password"
+                        placeholder="Enter your password"
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError
+                          errors={[fieldState.error]}
+                        />
+                      )}
+                    </Field>
+                  )}
+                />
+              </FieldGroup>
+            </form>          
+        </CardContent>
+
+        <CardFooter>
+        <Field orientation="responsive">
+          <Button type="submit" form="register-form" disabled={isPending}>
+              {isPending ? "Submitting..." : "Register"}
           </Button>
 
-          <p className="text-sm text-center">
+           <p className="text-sm text-center">
             Already have an account?{" "}
             <a href="/login" className="underline">
               Login
             </a>
           </p>
-        </CardContent>
+
+          {error && (
+              <p className="text-sm text-red-600">
+                {error}
+              </p>
+            )}
+        </Field>
+      </CardFooter>
       </Card>
     </div>
   )
